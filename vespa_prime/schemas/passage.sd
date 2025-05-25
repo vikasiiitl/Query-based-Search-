@@ -1,0 +1,44 @@
+schema passage {
+
+  document passage {
+
+    field document_id type string {
+      indexing: summary | attribute
+    }
+
+    field title type string {
+      indexing: summary | index
+      index: enable-bm25
+    }
+
+    field abstract type string {
+      indexing: summary | index
+      index: enable-bm25
+    }
+
+    field introduction type string {
+      indexing: summary | index
+      index: enable-bm25
+    }
+
+    field conclusion type string {
+      indexing: summary | index
+      index: enable-bm25
+    }
+
+  }
+
+  fieldset default {
+    fields: title, abstract, introduction, conclusion
+  }
+
+  rank-profile default {
+    first-phase {
+      expression: bm25(title) + bm25(abstract) + bm25(introduction) + bm25(conclusion)
+    }
+    function query(query_embedding) {
+      expression: query_embedding
+    }
+  }
+
+}
