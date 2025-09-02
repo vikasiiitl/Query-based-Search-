@@ -6,7 +6,7 @@ import fs from "fs"
 import path from "path"
 import { generateGeminiAnswer } from "@/lib/gemini"
 
-const VESPA_ENDPOINT = "https://fcad28f7.c3df2a2d.z.vespa-app.cloud/search"
+const VESPA_ENDPOINT = "https://f6f0971d.a7339ade.z.vespa-app.cloud/search"
 
 const httpsAgent = new https.Agent({
   cert: fs.readFileSync(path.resolve("src/app/api/vespa/search/serve.pem")),
