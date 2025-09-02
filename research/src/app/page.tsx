@@ -33,6 +33,14 @@ export default function ResearchPage() {
   const [indexingStatus, setIndexingStatus] = useState('');
   const [indexProgress, setIndexProgress] = useState(0);
   const [isIndexing, setIsIndexing] = useState(false);
+  
+  // Auto-ingest states
+  const [autoIngestQuery, setAutoIngestQuery] = useState('');
+  const [autoIngestLoading, setAutoIngestLoading] = useState(false);
+  
+  // Similar papers states
+  const [similarPaperUrl, setSimilarPaperUrl] = useState('');
+  const [similarPaperLoading, setSimilarPaperLoading] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('arxivPapers');
@@ -70,6 +78,65 @@ export default function ResearchPage() {
     setPapers(prev => [...prev, ...fetchedData]);
     setUrlList([]);
     setLoading(false);
+  };
+
+  // Auto-ingest function
+  const handleAutoIngest = async () => {
+    if (!autoIngestQuery.trim()) return;
+
+    setAutoIngestLoading(true);
+    try {
+      // const existingUrls = papers.map(paper => paper.url);
+      const response = await axios.post('/api/auto-ingest', {
+        query: autoIngestQuery,
+        limit: 20,
+        // existingUrls
+      });
+
+      if (response.data.success) {
+        const ingestedPapers = response.data.papers || [];
+        setPapers(prev => [...prev, ...ingestedPapers]);
+        setAutoIngestQuery('');
+        alert(`Successfully ingested ${ingestedPapers.length} papers matching "${autoIngestQuery}"`);
+      } else {
+        alert(`Auto-ingest error: ${response.data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Auto-ingest failed:', error);
+      alert('Failed to auto-ingest papers. Please try again.');
+    }
+    setAutoIngestLoading(false);
+  };
+
+  // Similar papers function
+  const handleFindSimilar = async () => {
+    if (!similarPaperUrl.trim()) return;
+    
+    setSimilarPaperLoading(true);
+    try {
+      const response = await axios.post('/api/auto-ingest-similar', {
+        htmlUrl: similarPaperUrl,
+        limit: 20
+      });
+
+      if (response.data.success) {
+        const similarPapers = response.data.papers || [];
+        setPapers(prev => [...prev, ...similarPapers]);
+        setSimilarPaperUrl('');
+        
+        if (similarPapers.length > 0) {
+          alert(`Found and ingested ${similarPapers.length} similar papers!`);
+        } else {
+          alert('No similar papers found or all similar papers failed extraction.');
+        }
+      } else {
+        alert(`Similar papers error: ${response.data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Similar papers search failed:', error);
+      alert('Failed to find similar papers. Please try again.');
+    }
+    setSimilarPaperLoading(false);
   };
 
   const toggleExpand = (index: number) => {
@@ -129,7 +196,65 @@ export default function ResearchPage() {
       </header>
 
       <main className="max-w-5xl mx-auto p-6 space-y-6">
-        {/* Input Section */}
+        {/* Auto-Ingest Section */}
+        <Card className="border-green-200">
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-1">
+              <label htmlFor="auto-ingest" className="block text-sm font-medium text-green-700">
+                🤖 Auto-Ingest Papers by Query
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  id="auto-ingest"
+                  placeholder="e.g., computer vision, machine learning, transformer"
+                  value={autoIngestQuery}
+                  onChange={(e) => setAutoIngestQuery(e.target.value)}
+                />
+                <Button 
+                  onClick={handleAutoIngest} 
+                  disabled={autoIngestLoading} 
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {autoIngestLoading ? 'Auto-Ingesting...' : 'Auto-Ingest'}
+                </Button>
+              </div>
+              <p className="text-xs text-green-600">
+                Automatically finds, extracts, and indexes ArXiv papers matching your query
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Similar Papers Section */}
+        <Card className="border-blue-200">
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-1">
+              <label htmlFor="similar-ingest" className="block text-sm font-medium text-blue-700">
+                🔗 Find Similar Papers
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  id="similar-ingest"
+                  placeholder="https://arxiv.org/html/2508.13154v1"
+                  value={similarPaperUrl}
+                  onChange={(e) => setSimilarPaperUrl(e.target.value)}
+                />
+                <Button 
+                  onClick={handleFindSimilar} 
+                  disabled={similarPaperLoading}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {similarPaperLoading ? 'Finding Similar...' : 'Find Similar'}
+                </Button>
+              </div>
+              <p className="text-xs text-blue-600">
+                Analyzes the paper content and finds similar papers on ArXiv
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Manual URL Input Section */}
         <Card>
           <CardContent className="p-6 space-y-4">
             <div className="space-y-1">
@@ -185,7 +310,7 @@ export default function ResearchPage() {
         {/* Display Fetched Papers */}
         {papers.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-green-700">📄 Fetched Papers:</h3>
+            <h3 className="text-lg font-semibold text-green-700">📄 Fetched Papers ({papers.length}):</h3>
             {papers.map((paper, idx) => (
               <Card key={idx}>
                 <CardContent className="p-4 space-y-2">

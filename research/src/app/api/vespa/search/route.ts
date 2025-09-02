@@ -6,7 +6,7 @@ import fs from "fs"
 import path from "path"
 import { generateGeminiAnswer } from "@/lib/gemini"
 
-const VESPA_ENDPOINT = "https://a0b0770e.e336405d.z.vespa-app.cloud/search"
+const VESPA_ENDPOINT = "https://fcad28f7.c3df2a2d.z.vespa-app.cloud/search"
 
 const httpsAgent = new https.Agent({
   cert: fs.readFileSync(path.resolve("src/app/api/vespa/search/serve.pem")),
@@ -15,8 +15,37 @@ const httpsAgent = new https.Agent({
 
 export async function POST(req: Request) {
   try {
-    const { query, topK = 10 } = await req.json()
+    const body = await req.json()
+    const { query, topK = 10, checkUrl = null } = body
 
+    // NEW: Check if a document exists by URL
+    if (checkUrl) {
+      console.log(`Checking if document exists in Vespa: ${checkUrl}`);
+      
+      const exactUrlQuery = {
+        yql: `select * from sources * where document_id contains "${checkUrl}";`,
+        hits: 5,
+      }
+      
+      const vespaResponse = await axios.post(VESPA_ENDPOINT, exactUrlQuery, {
+        headers: { "Content-Type": "application/json" },
+        httpsAgent,
+      })
+      
+      const hits = vespaResponse.data.root.children ?? []
+      
+      // Check if any document exactly matches the URL
+      const exactMatch = hits.find((hit: any) => 
+        hit.fields && hit.fields.document_id === checkUrl
+      )
+      
+      return NextResponse.json({
+        exists: !!exactMatch,
+        matchCount: hits.length
+      })
+    }
+
+    // Original search functionality
     if (!query) {
       return NextResponse.json({ message: "Missing query" }, { status: 400 })
     }

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       key: fs.readFileSync(path.resolve("src/app/api/vespa/load/ingest_key.pem")),
     });
 
-    const baseUrl = "https://a0b0770e.e336405d.z.vespa-app.cloud/";
+    const baseUrl = "https://fcad28f7.c3df2a2d.z.vespa-app.cloud/";
 
     const payload = {
       fields: {
